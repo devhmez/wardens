@@ -1,0 +1,252 @@
+class_name Puppet
+extends Node3D
+# Procedurally animated humanoid built from the jointed Blender model.
+# Model faces +Z. A limb hanging down swings FORWARD with negative X rotation.
+
+const JOINTS := ["Hips", "Torso", "Head", "UpperArmL", "LowerArmL", "UpperArmR", "LowerArmR",
+	"UpperLegL", "LowerLegL", "UpperLegR", "LowerLegR"]
+
+const ACTIONS := {
+	"punchR": [[0.0, {"Torso": Vector3(0.05, -0.6, 0), "UpperArmR": Vector3(0.7, 0, -0.2), "LowerArmR": Vector3(-1.9, 0, 0), "UpperArmL": Vector3(-1.1, 0, 0.2), "LowerArmL": Vector3(-0.9, 0, 0)}],
+		[0.09, {"Torso": Vector3(0.15, 0.65, 0), "UpperArmR": Vector3(-1.6, 0, -0.05), "LowerArmR": Vector3(-0.05, 0, 0), "UpperArmL": Vector3(0.5, 0, 0.25), "LowerArmL": Vector3(-1.8, 0, 0)}],
+		[0.26, {"Torso": Vector3(0.12, 0.55, 0), "UpperArmR": Vector3(-1.5, 0, -0.05), "LowerArmR": Vector3(-0.1, 0, 0), "UpperArmL": Vector3(0.5, 0, 0.25), "LowerArmL": Vector3(-1.8, 0, 0)}],
+		[0.4, {}]],
+	"lift": [[0.0, {"Torso": Vector3(0.35, 0, 0), "UpperArmL": Vector3(-0.4, 0, 0.5), "UpperArmR": Vector3(-0.4, 0, -0.5), "LowerArmL": Vector3(-0.3, 0, 0), "LowerArmR": Vector3(-0.3, 0, 0), "Hips": Vector3(0, 0, 0)}],
+		[0.2, {"Torso": Vector3(-0.2, 0, 0), "UpperArmL": Vector3(-2.5, 0, 0.35), "UpperArmR": Vector3(-2.5, 0, -0.35), "LowerArmL": Vector3(-0.5, 0, 0), "LowerArmR": Vector3(-0.5, 0, 0)}],
+		[0.34, {"Torso": Vector3(-0.2, 0, 0), "UpperArmL": Vector3(-2.4, 0, 0.35), "UpperArmR": Vector3(-2.4, 0, -0.35), "LowerArmL": Vector3(-0.6, 0, 0), "LowerArmR": Vector3(-0.6, 0, 0)}],
+		[0.5, {}]],
+	"push": [[0.0, {"Torso": Vector3(-0.1, 0, 0), "UpperArmL": Vector3(-0.6, 0, 0.3), "UpperArmR": Vector3(-0.6, 0, -0.3), "LowerArmL": Vector3(-2.0, 0, 0), "LowerArmR": Vector3(-2.0, 0, 0)}],
+		[0.08, {"Torso": Vector3(0.3, 0, 0), "UpperArmL": Vector3(-1.55, 0, 0.1), "UpperArmR": Vector3(-1.55, 0, -0.1), "LowerArmL": Vector3(-0.05, 0, 0), "LowerArmR": Vector3(-0.05, 0, 0)}],
+		[0.3, {"Torso": Vector3(0.25, 0, 0), "UpperArmL": Vector3(-1.5, 0, 0.1), "UpperArmR": Vector3(-1.5, 0, -0.1), "LowerArmL": Vector3(-0.1, 0, 0), "LowerArmR": Vector3(-0.1, 0, 0)}],
+		[0.45, {}]],
+	"stomp": [[0.0, {"Torso": Vector3(-0.15, 0, 0), "UpperLegR": Vector3(-1.5, 0, 0), "LowerLegR": Vector3(1.6, 0, 0), "UpperArmL": Vector3(-2.2, 0, 0.6), "UpperArmR": Vector3(-2.2, 0, -0.6), "LowerArmL": Vector3(-0.9, 0, 0), "LowerArmR": Vector3(-0.9, 0, 0)}],
+		[0.16, {"Torso": Vector3(0.45, 0, 0), "UpperLegR": Vector3(-0.5, 0, 0), "LowerLegR": Vector3(0.7, 0, 0), "UpperLegL": Vector3(-0.3, 0, 0.2), "LowerLegL": Vector3(0.6, 0, 0), "UpperArmL": Vector3(-0.3, 0, 0.5), "UpperArmR": Vector3(-0.3, 0, -0.5), "LowerArmL": Vector3(-0.4, 0, 0), "LowerArmR": Vector3(-0.4, 0, 0)}],
+		[0.42, {"Torso": Vector3(0.4, 0, 0), "UpperLegR": Vector3(-0.5, 0, 0), "LowerLegR": Vector3(0.7, 0, 0), "UpperLegL": Vector3(-0.3, 0, 0.2), "LowerLegL": Vector3(0.6, 0, 0), "UpperArmL": Vector3(-0.3, 0, 0.5), "UpperArmR": Vector3(-0.3, 0, -0.5), "LowerArmL": Vector3(-0.4, 0, 0), "LowerArmR": Vector3(-0.4, 0, 0)}],
+		[0.6, {}]],
+	"sweepR": [[0.0, {"Torso": Vector3(0.1, -0.9, 0), "UpperArmR": Vector3(-0.3, 0, -1.5), "LowerArmR": Vector3(-0.3, 0, 0), "UpperArmL": Vector3(-0.8, 0, 0.3), "LowerArmL": Vector3(-1.4, 0, 0)}],
+		[0.14, {"Torso": Vector3(0.15, 0.9, 0), "UpperArmR": Vector3(-1.6, 0, 0.5), "LowerArmR": Vector3(-0.1, 0, 0), "UpperArmL": Vector3(0.4, 0, 0.5), "LowerArmL": Vector3(-1.0, 0, 0)}],
+		[0.3, {"Torso": Vector3(0.1, 0.8, 0), "UpperArmR": Vector3(-1.5, 0, 0.5), "LowerArmR": Vector3(-0.2, 0, 0), "UpperArmL": Vector3(0.4, 0, 0.5), "LowerArmL": Vector3(-1.0, 0, 0)}],
+		[0.45, {}]],
+	"raise": [[0.0, {"Torso": Vector3(-0.15, 0, 0), "UpperArmL": Vector3(-0.3, 0, 1.5), "UpperArmR": Vector3(-0.3, 0, -1.5), "LowerArmL": Vector3(-0.4, 0, 0), "LowerArmR": Vector3(-0.4, 0, 0)}],
+		[0.3, {"Torso": Vector3(-0.2, 0, 0), "UpperArmL": Vector3(-0.3, 0, 2.3), "UpperArmR": Vector3(-0.3, 0, -2.3), "LowerArmL": Vector3(-0.5, 0, 0), "LowerArmR": Vector3(-0.5, 0, 0)}],
+		[0.42, {"Torso": Vector3(0.3, 0, 0), "UpperArmL": Vector3(-1.5, 0, 0.15), "UpperArmR": Vector3(-1.5, 0, -0.15), "LowerArmL": Vector3(-0.1, 0, 0), "LowerArmR": Vector3(-0.1, 0, 0)}],
+		[0.75, {"Torso": Vector3(0.25, 0, 0), "UpperArmL": Vector3(-1.5, 0, 0.15), "UpperArmR": Vector3(-1.5, 0, -0.15), "LowerArmL": Vector3(-0.1, 0, 0), "LowerArmR": Vector3(-0.1, 0, 0)}],
+		[0.9, {}]],
+	"channel": [[0.0, {"Torso": Vector3(0.2, 0.25, 0), "UpperArmL": Vector3(-1.45, 0, 0.15), "UpperArmR": Vector3(-1.6, 0, -0.1), "LowerArmL": Vector3(-0.35, 0, 0), "LowerArmR": Vector3(-0.1, 0, 0)}],
+		[9.0, {"Torso": Vector3(0.2, 0.25, 0), "UpperArmL": Vector3(-1.45, 0, 0.15), "UpperArmR": Vector3(-1.6, 0, -0.1), "LowerArmL": Vector3(-0.35, 0, 0), "LowerArmR": Vector3(-0.1, 0, 0)}]],
+	"burst": [[0.0, {"Torso": Vector3(0.5, 0, 0), "UpperArmL": Vector3(-0.9, 0, 0.2), "UpperArmR": Vector3(-0.9, 0, -0.2), "LowerArmL": Vector3(-2.0, 0, 0), "LowerArmR": Vector3(-2.0, 0, 0)}],
+		[0.12, {"Torso": Vector3(-0.3, 0, 0), "UpperArmL": Vector3(-0.2, 0, 1.9), "UpperArmR": Vector3(-0.2, 0, -1.9), "LowerArmL": Vector3(0, 0, 0), "LowerArmR": Vector3(0, 0, 0), "Head": Vector3(-0.3, 0, 0)}],
+		[0.4, {"Torso": Vector3(-0.25, 0, 0), "UpperArmL": Vector3(-0.2, 0, 1.8), "UpperArmR": Vector3(-0.2, 0, -1.8), "LowerArmL": Vector3(0, 0, 0), "LowerArmR": Vector3(0, 0, 0), "Head": Vector3(-0.3, 0, 0)}],
+		[0.6, {}]],
+	"spin": [[0.0, {"Torso": Vector3(0.2, -0.8, 0), "UpperArmL": Vector3(-0.2, 0, 1.4), "UpperArmR": Vector3(-0.2, 0, -1.4), "UpperLegR": Vector3(-0.2, 0, -1.3), "LowerLegR": Vector3(0.1, 0, 0)}],
+		[0.4, {"Torso": Vector3(0.2, 0.8, 0), "UpperArmL": Vector3(-0.2, 0, 1.4), "UpperArmR": Vector3(-0.2, 0, -1.4), "UpperLegR": Vector3(-0.2, 0, -1.3), "LowerLegR": Vector3(0.1, 0, 0)}],
+		[0.55, {}]],
+	"hit": [[0.0, {"Torso": Vector3(-0.5, 0.2, 0), "Head": Vector3(-0.4, 0, 0), "UpperArmL": Vector3(0.3, 0, 0.8), "UpperArmR": Vector3(0.3, 0, -0.8)}],
+		[0.18, {"Torso": Vector3(-0.3, 0.1, 0), "Head": Vector3(-0.2, 0, 0), "UpperArmL": Vector3(0.2, 0, 0.6), "UpperArmR": Vector3(0.2, 0, -0.6)}],
+		[0.3, {}]],
+	"windup": [[0.0, {"Torso": Vector3(-0.25, -0.5, 0), "UpperArmR": Vector3(-2.7, 0, -0.3), "LowerArmR": Vector3(-0.9, 0, 0), "UpperArmL": Vector3(-0.9, 0, 0.3), "LowerArmL": Vector3(-1.0, 0, 0)}],
+		[2.0, {"Torso": Vector3(-0.3, -0.55, 0), "UpperArmR": Vector3(-2.8, 0, -0.3), "LowerArmR": Vector3(-0.9, 0, 0), "UpperArmL": Vector3(-0.9, 0, 0.3), "LowerArmL": Vector3(-1.0, 0, 0)}]],
+	"strike": [[0.0, {"Torso": Vector3(0.55, 0.5, 0), "UpperArmR": Vector3(-0.9, 0, 0.2), "LowerArmR": Vector3(-0.1, 0, 0), "UpperArmL": Vector3(0.4, 0, 0.4), "LowerArmL": Vector3(-0.8, 0, 0)}],
+		[0.3, {"Torso": Vector3(0.5, 0.45, 0), "UpperArmR": Vector3(-0.8, 0, 0.2), "LowerArmR": Vector3(-0.1, 0, 0), "UpperArmL": Vector3(0.4, 0, 0.4), "LowerArmL": Vector3(-0.8, 0, 0)}],
+		[0.5, {}]],
+	"slam_up": [[0.0, {"Torso": Vector3(-0.4, 0, 0), "UpperArmL": Vector3(-2.8, 0, 0.3), "UpperArmR": Vector3(-2.8, 0, -0.3), "LowerArmL": Vector3(-0.5, 0, 0), "LowerArmR": Vector3(-0.5, 0, 0)}],
+		[3.0, {"Torso": Vector3(-0.45, 0, 0), "UpperArmL": Vector3(-2.9, 0, 0.3), "UpperArmR": Vector3(-2.9, 0, -0.3), "LowerArmL": Vector3(-0.5, 0, 0), "LowerArmR": Vector3(-0.5, 0, 0)}]],
+	"slam_down": [[0.0, {"Torso": Vector3(0.8, 0, 0), "UpperArmL": Vector3(-0.9, 0, 0.2), "UpperArmR": Vector3(-0.9, 0, -0.2), "LowerArmL": Vector3(0, 0, 0), "LowerArmR": Vector3(0, 0, 0), "UpperLegL": Vector3(-0.6, 0, 0.2), "UpperLegR": Vector3(-0.6, 0, -0.2), "LowerLegL": Vector3(1.0, 0, 0), "LowerLegR": Vector3(1.0, 0, 0)}],
+		[0.5, {"Torso": Vector3(0.7, 0, 0), "UpperArmL": Vector3(-0.9, 0, 0.2), "UpperArmR": Vector3(-0.9, 0, -0.2), "LowerArmL": Vector3(0, 0, 0), "LowerArmR": Vector3(0, 0, 0), "UpperLegL": Vector3(-0.6, 0, 0.2), "UpperLegR": Vector3(-0.6, 0, -0.2), "LowerLegL": Vector3(1.0, 0, 0), "LowerLegR": Vector3(1.0, 0, 0)}],
+		[0.8, {}]],
+	"cast": [[0.0, {"Torso": Vector3(-0.1, -0.3, 0), "UpperArmR": Vector3(-1.2, 0, -1.0), "LowerArmR": Vector3(-1.0, 0, 0), "UpperArmL": Vector3(-1.2, 0, 1.0), "LowerArmL": Vector3(-1.0, 0, 0)}],
+		[3.0, {"Torso": Vector3(-0.1, -0.3, 0), "UpperArmR": Vector3(-1.2, 0, -1.0), "LowerArmR": Vector3(-1.0, 0, 0), "UpperArmL": Vector3(-1.2, 0, 1.0), "LowerArmL": Vector3(-1.0, 0, 0)}]],
+}
+
+var nodes := {}
+var rest_pos := {}
+var cur := {}
+var mats: Array = []
+var move := 0.0
+var grounded := true
+var gliding := false
+var phase := 0.0
+var t := 0.0
+var action := ""
+var action_t := 0.0
+var spin := 0.0
+var down := 0.0          # 0 standing, 1 lying on the ground
+var stance := 0.0        # wide bending stance
+var _flash := 0.0
+var _model: Node3D
+var bob_scale := 1.0
+
+
+func setup(model_name: String, outline := 0.014) -> void:
+	_model = FX.model(model_name)
+	add_child(_model)
+	mats = FX.toonify(_model, outline, true)
+	for j in JOINTS:
+		var n = _model.find_child(j, true, false)
+		if n:
+			nodes[j] = n
+			rest_pos[j] = n.position
+			cur[j] = Vector3.ZERO
+	t = randf() * 10.0
+
+
+func play(a: String) -> void:
+	if a.ends_with("L") and not ACTIONS.has(a):
+		action = a.substr(0, a.length() - 1) + "R"
+		action_t = 0.0
+		_mirror = true
+		return
+	_mirror = false
+	action = a
+	action_t = 0.0
+
+var _mirror := false
+
+
+func stop(a := "") -> void:
+	if a == "" or action == a or (_mirror and action == a.substr(0, a.length() - 1) + "R"):
+		action = ""
+
+
+func flash(amount := 1.0) -> void:
+	_flash = amount
+
+
+func set_dissolve(v: float) -> void:
+	for m in mats:
+		m.set_shader_parameter("dissolve", v)
+		if m.next_pass:
+			m.next_pass.set_shader_parameter("dissolve", v)
+
+
+func set_frost(v: float) -> void:
+	for m in mats:
+		m.set_shader_parameter("frost", v)
+
+
+func hand(side: String) -> Vector3:
+	var n = nodes.get("LowerArm" + side)
+	if n == null:
+		return global_position + Vector3(0, 1.2, 0)
+	return n.global_transform * Vector3(0, -0.32, 0)
+
+
+func _sample(frames: Array, time: float) -> Dictionary:
+	# Returns the interpolated pose, or {} when the action has finished.
+	if time >= frames[frames.size() - 1][0]:
+		return {"_done": true}
+	var i := 0
+	while i < frames.size() - 1 and frames[i + 1][0] <= time:
+		i += 1
+	var a: Array = frames[i]
+	var b: Array = frames[mini(i + 1, frames.size() - 1)]
+	var span: float = maxf(0.0001, b[0] - a[0])
+	var k := smoothstep(0.0, 1.0, (time - a[0]) / span)
+	var out := {"_w": 1.0}
+	var pa: Dictionary = a[1]
+	var pb: Dictionary = b[1]
+	if pb.is_empty():
+		out["_w"] = 1.0 - k
+		return out.merged(pa)
+	for j in pa:
+		out[j] = pa[j].lerp(pb.get(j, Vector3.ZERO), k)
+	for j in pb:
+		if not pa.has(j):
+			out[j] = Vector3.ZERO.lerp(pb[j], k)
+	return out
+
+
+func _process(dt: float) -> void:
+	if nodes.is_empty():
+		return
+	t += dt
+	var p := {}
+	for j in JOINTS:
+		p[j] = Vector3.ZERO
+	var hips_y := 0.0
+	var breathe := sin(t * 2.0)
+	if not grounded:
+		if gliding:
+			p["Torso"] = Vector3(0.7, 0, 0)
+			p["Head"] = Vector3(-0.5, 0, 0)
+			p["UpperArmL"] = Vector3(0.2, 0, 1.5)
+			p["UpperArmR"] = Vector3(0.2, 0, -1.5)
+			p["UpperLegL"] = Vector3(0.5, 0, 0.1)
+			p["UpperLegR"] = Vector3(0.3, 0, -0.1)
+			p["LowerLegL"] = Vector3(0.3, 0, 0)
+			p["LowerLegR"] = Vector3(0.6, 0, 0)
+		else:
+			p["Torso"] = Vector3(0.1, 0, 0)
+			p["UpperArmL"] = Vector3(-0.3, 0, 1.1)
+			p["UpperArmR"] = Vector3(-0.3, 0, -1.1)
+			p["LowerArmL"] = Vector3(-0.5, 0, 0)
+			p["LowerArmR"] = Vector3(-0.5, 0, 0)
+			p["UpperLegL"] = Vector3(-0.9, 0, 0)
+			p["LowerLegL"] = Vector3(1.3, 0, 0)
+			p["UpperLegR"] = Vector3(0.25, 0, 0)
+			p["LowerLegR"] = Vector3(0.5, 0, 0)
+	else:
+		var m := clampf(move, 0.0, 1.3)
+		phase += dt * (6.0 + 6.5 * m) * (1.0 if m > 0.05 else 0.0)
+		var s := sin(phase)
+		var c := cos(phase)
+		# idle layer
+		var idle := 1.0 - minf(m, 1.0)
+		p["Torso"] = Vector3(0.03 * breathe * idle + 0.22 * m, s * 0.18 * m, 0)
+		p["Head"] = Vector3(-0.1 * m, -s * 0.1 * m, 0)
+		p["UpperArmL"] = Vector3(s * 0.95 * m, 0, 0.13 + 0.02 * breathe)
+		p["UpperArmR"] = Vector3(-s * 0.95 * m, 0, -0.13 - 0.02 * breathe)
+		p["LowerArmL"] = Vector3(-0.25 - 0.9 * m, 0, 0)
+		p["LowerArmR"] = Vector3(-0.25 - 0.9 * m, 0, 0)
+		p["UpperLegL"] = Vector3(-s * 0.85 * m, 0, 0.03)
+		p["UpperLegR"] = Vector3(s * 0.85 * m, 0, -0.03)
+		p["LowerLegL"] = Vector3((0.15 + maxf(0.0, c) * 1.25) * m, 0, 0)
+		p["LowerLegR"] = Vector3((0.15 + maxf(0.0, -c) * 1.25) * m, 0, 0)
+		hips_y = absf(c) * 0.07 * m * bob_scale - 0.02 * m
+		# bending stance when standing still
+		var st := stance * idle
+		if st > 0.01:
+			p["UpperLegL"] += Vector3(-0.35, 0, 0.3) * st
+			p["UpperLegR"] += Vector3(-0.35, 0, -0.3) * st
+			p["LowerLegL"] += Vector3(0.6, 0, 0) * st
+			p["LowerLegR"] += Vector3(0.6, 0, 0) * st
+			hips_y -= 0.1 * st
+	# action overlay
+	if action != "":
+		action_t += dt
+		var pose := _sample(ACTIONS[action], action_t)
+		if pose.has("_done"):
+			action = ""
+		else:
+			var w: float = pose["_w"]
+			for j in pose:
+				if j.begins_with("_"):
+					continue
+				var jj: String = j
+				var v: Vector3 = pose[j]
+				if _mirror:
+					if jj.ends_with("L"):
+						jj = jj.substr(0, jj.length() - 1) + "R"
+					elif jj.ends_with("R"):
+						jj = jj.substr(0, jj.length() - 1) + "L"
+					v = Vector3(v.x, -v.y, -v.z)
+				p[jj] = p[jj].lerp(v, w)
+	# smooth + apply
+	var k := 1.0 - exp(-dt * 22.0)
+	for j in JOINTS:
+		if not nodes.has(j):
+			continue
+		cur[j] = cur[j].lerp(p[j], k)
+		nodes[j].rotation = cur[j]
+	var hp: Vector3 = rest_pos["Hips"]
+	nodes["Hips"].position = hp + Vector3(0, hips_y, 0)
+	# whole-body offsets
+	_model.rotation = Vector3(-down * 1.45, spin, 0)
+	_model.position = Vector3(0, down * 0.25, 0)
+	if _flash > 0.0 or _flash_applied:
+		_flash = maxf(0.0, _flash - dt * 6.0)
+		for m2 in mats:
+			m2.set_shader_parameter("flash", _flash)
+		_flash_applied = _flash > 0.0
+
+var _flash_applied := false
